@@ -7,7 +7,7 @@ export class ResponseService {
     async responseStructure(
         status: string,
         message: string,
-        data: any,
+        data: unknown,
         code: number,
         res: Response,
     ) {
@@ -27,7 +27,7 @@ export class ResponseService {
             res
         );
     }
-    async redirectToHomeWithData(message: string, data: any, res: Response) {
+    async redirectToHomeWithData(message: string, data: Record<string, unknown>, res: Response) {
 
         const clonedData = { ...data };
 
@@ -46,7 +46,7 @@ export class ResponseService {
     }
 
 
-    async USER_NOT_FOUND(message: string, data: any, res: Response) {
+    async USER_NOT_FOUND(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'USER_NOT_FOUND',
             message,
@@ -56,7 +56,7 @@ export class ResponseService {
         );
     }
 
-    async NOT_FOUND(message: string, data: any, res: Response) {
+    async NOT_FOUND(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'NOT_FOUND',
             message,
@@ -66,7 +66,7 @@ export class ResponseService {
         );
     }
 
-    async success(status: string, message: string, data: any, res: Response) {
+    async success(status: string, message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             status,
             message,
@@ -80,7 +80,7 @@ export class ResponseService {
         return `${loginType} DOES NOT EXIST`;
     }
 
-    async noDataInput(message: string, data: any, res: Response) {
+    async noDataInput(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'NO_INPUT_DATA',
             message,
@@ -110,7 +110,7 @@ export class ResponseService {
         );
     }
 
-    async INTERNAL_SERVER_ERROR(message: string, data: any, res: Response) {
+    async INTERNAL_SERVER_ERROR(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'INTERNAL_SERVER_ERROR',
             message,
@@ -132,7 +132,7 @@ export class ResponseService {
 
     // status: string,
     // message: string,
-    // data: any,
+    // data: unknown,
     // code: number,
     // res: Response,
     async CONFLICT_PRECISE(res: Response, status: string) {
@@ -177,7 +177,7 @@ export class ResponseService {
     }
 
     // **New Method to Handle Bad Requests (400)**
-    async BAD_REQUEST(message: string, data: any, res: Response) {
+    async BAD_REQUEST(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'BAD_REQUEST',
             message,
@@ -188,7 +188,7 @@ export class ResponseService {
     }
 
     // **New Method to Handle Too Many Requests (429)**
-    async TOO_MANY_REQUESTS(message: string, data: any, res: Response) {
+    async TOO_MANY_REQUESTS(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'TOO_MANY_REQUESTS',
             message,

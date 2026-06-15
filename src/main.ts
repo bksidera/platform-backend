@@ -37,6 +37,5 @@ async function bootstrap() {
   );
 
   await app.listen(port);
-  console.log('Server started at', port);
 }
 bootstrap();
