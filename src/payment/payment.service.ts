@@ -8,13 +8,10 @@ import { LoggerService } from 'src/logger/logger.service';
 import { CreateMomentIntentDto } from './dto/payment.dto';
 
 /**
- * Staging-only payment simulation. The full Moment journey (amount, identity,
- * placement, the Hold, the mark landing) runs unchanged, but no Stripe call is
- * made and the Stream succeeds on first status poll. This is NOT a free lane:
- * it exists only for UX testing before Stripe is configured, and it refuses to
- * activate when a live Stripe key is present, so it can never reach the real
- * product. (The payment gate — Inscription requires a succeeded Stream — is
- * enforced identically in both modes.)
+ * Staging-only payment simulation. Amount-card journeys run unchanged, but no
+ * Stripe call is made and the Stream succeeds on first status poll. This is
+ * NOT a free lane: it exists only for UX testing before Stripe is configured,
+ * and it refuses to activate when a live Stripe key is present.
  */
 export function paymentSimulationEnabled(configService: ConfigService): boolean {
   const flag = configService.get<string>('PAYMENT_SIMULATION') === 'true';
@@ -145,6 +142,10 @@ export class PaymentService {
           where: { id: streamId, status: 'pending' },
           data: { status: 'failed' },
         });
+        await this.prisma.card.updateMany({
+          where: { streamId },
+          data: { paymentStatus: 'failed' },
+        });
       }
     }
     return { received: true };
@@ -157,13 +158,17 @@ export class PaymentService {
     });
     if (updated.count > 0) {
       const stream = await this.prisma.stream.findUnique({ where: { id: streamId } });
+      const card = await this.prisma.card.updateMany({
+        where: { streamId },
+        data: { paymentStatus: 'succeeded' },
+      });
       await this.prisma.event.create({
         data: {
           type: 'checkout_complete',
           creatorId: stream.creatorId,
           monumentId: stream.monumentId,
           giverId: stream.giverId,
-          metadata: { amountCents: stream.amountCents, streamType: stream.type },
+          metadata: { amountCents: stream.amountCents, streamType: stream.type, cardsUpdated: card.count },
         },
       });
     }

@@ -9,6 +9,8 @@ import { CreatorModule } from './creator/creator.module';
 import { PaymentModule } from './payment/payment.module';
 import { EventsModule } from './events/events.module';
 import { MonumentModule } from './monument/monument.module';
+import { FrameModule } from './frame/frame.module';
+import { CardModule } from './card/card.module';
 import { StripeModule } from './stripe/stripe.module';
 import { GuardsModule } from './guards/guards.module';
 import { ResponseModule } from './response/response.module';
@@ -30,6 +32,8 @@ import { FileUploadModule } from './file-upload/file-upload.module';
     PaymentModule,
     EventsModule,
     MonumentModule,
+    FrameModule,
+    CardModule,
     GuardsModule,
     ResponseModule,
     JwtStrategyModule,

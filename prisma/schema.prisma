@@ -7,11 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// PLATFORM data model — spec §11 (PLATFORM-spec-v2.md).
-// Invariants enforced here:
-//  - Inscription.streamId required + unique: no Inscription without a completed Stream (the payment gate).
-//  - Stream is append-only (status transitions only; never expose updates to amounts/parties).
-//  - Inscription is immutable after placement except visibility / hiddenByCreator.
+// PLATFORM data model.
+// Living Frame is the active product model: a creator-owned image with visitor
+// cards attached below it. Monument / Inscription remain only as deprecated
+// scaffolding until the production cutover is complete.
 
 enum ArchiveVisibility {
   aggregate_only
@@ -24,6 +23,11 @@ enum GiverStatus {
 }
 
 enum MonumentStatus {
+  active
+  archived
+}
+
+enum FrameStatus {
   active
   archived
 }
@@ -43,6 +47,13 @@ enum ModerationStatus {
   pending
   approved
   held
+}
+
+enum CardPaymentStatus {
+  none
+  pending
+  succeeded
+  failed
 }
 
 enum Visibility {
@@ -69,6 +80,8 @@ model Creator {
   archiveVisibility ArchiveVisibility @default(aggregate_only)
   createdAt         DateTime          @default(now())
 
+  frames            Frame[]
+  cards             Card[]
   monuments         Monument[]
   streams           Stream[]
   stewardships      Stewardship[]
@@ -83,8 +96,55 @@ model Giver {
   createdAt DateTime    @default(now())
 
   streams      Stream[]
+  cards        Card[]
   inscriptions Inscription[]
   stewardships Stewardship[]
+}
+
+model Frame {
+  id        String      @id @default(uuid())
+  creatorId String
+  imageUrl  String
+  title     String
+  context   String?
+  slug      String      @unique
+  status    FrameStatus @default(active)
+  createdAt DateTime    @default(now())
+
+  creator Creator @relation(fields: [creatorId], references: [id])
+  cards   Card[]
+
+  @@index([creatorId])
+}
+
+model Card {
+  id                    String             @id @default(uuid())
+  frameId               String
+  creatorId             String
+  giverId               String
+  streamId              String?            @unique
+  displayName           String
+  email                 String
+  note                  String?            @db.VarChar(240)
+  photoUrl              String?
+  photoModerationStatus ModerationStatus?
+  amountCents           Int?
+  currency              String             @default("usd")
+  paymentStatus         CardPaymentStatus  @default(none)
+  visibility            Visibility         @default(public)
+  hiddenByCreator       Boolean            @default(false)
+  reportedAt            DateTime?
+  reportReason          String?            @db.VarChar(240)
+  createdAt             DateTime           @default(now())
+
+  frame   Frame   @relation(fields: [frameId], references: [id])
+  creator Creator @relation(fields: [creatorId], references: [id])
+  giver   Giver   @relation(fields: [giverId], references: [id])
+  stream  Stream? @relation(fields: [streamId], references: [id])
+
+  @@index([frameId, createdAt])
+  @@index([creatorId, createdAt])
+  @@index([giverId])
 }
 
 model Monument {
@@ -122,6 +182,7 @@ model Stream {
   giver            Giver             @relation(fields: [giverId], references: [id])
   creator          Creator           @relation(fields: [creatorId], references: [id])
   monument         Monument?         @relation(fields: [monumentId], references: [id])
+  card             Card?
   inscription      Inscription?
   countersignature Countersignature?
 
@@ -204,10 +265,14 @@ model Event {
   sourceSlug String?
   creatorId  String?
   monumentId String?
+  frameId    String?
+  cardId     String?
   giverId    String?
   metadata   Json?
   createdAt  DateTime @default(now())
 
   @@index([type, createdAt])
   @@index([monumentId])
+  @@index([frameId])
+  @@index([cardId])
 }
