@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { StripeService } from 'src/stripe/stripe.service';
 import { LoggerService } from 'src/logger/logger.service';
-import { CreateMomentIntentDto } from './dto/payment.dto';
 
 /**
  * Staging-only payment simulation. Amount-card journeys run unchanged, but no
@@ -30,97 +28,6 @@ export class PaymentService {
 
   private get simulation() {
     return paymentSimulationEnabled(this.configService);
-  }
-
-  async createMomentIntent(dto: CreateMomentIntentDto) {
-    const creator = await this.prisma.creator.findUnique({ where: { slug: dto.creatorSlug } });
-    if (!creator) return { error: 'CREATOR_NOT_FOUND' as const };
-    if (!this.simulation && (!creator.stripeAccountId || !creator.stripeOnboarded)) {
-      return { error: 'CREATOR_NOT_ONBOARDED' as const };
-    }
-
-    // Guest checkout: the email is an account in embryo. Name refreshes to the latest given.
-    const giver = await this.prisma.giver.upsert({
-      where: { email: dto.email.toLowerCase().trim() },
-      create: { email: dto.email.toLowerCase().trim(), name: dto.name },
-      update: { name: dto.name },
-    });
-
-    let monument = null;
-    if (dto.monumentSlug) {
-      monument = await this.prisma.monument.findUnique({
-        where: { qrSourceSlug: dto.monumentSlug },
-      });
-    }
-    const venueStamp = monument
-      ? `${monument.venue} · ${monument.eventDate.toISOString().slice(0, 10)}`
-      : null;
-
-    const stream = await this.prisma.stream.create({
-      data: {
-        giverId: giver.id,
-        creatorId: creator.id,
-        monumentId: monument?.id ?? null,
-        type: 'moment',
-        amountCents: dto.amountCents,
-        venueStamp,
-      },
-    });
-
-    let clientSecret: string;
-    if (this.simulation) {
-      const simId = `sim_${randomUUID()}`;
-      clientSecret = `sim_secret_${stream.id}`;
-      await this.prisma.stream.update({
-        where: { id: stream.id },
-        data: { stripePaymentIntentId: simId },
-      });
-    } else {
-      const intent = await this.stripe.client.paymentIntents.create({
-        amount: dto.amountCents,
-        currency: 'usd',
-        automatic_payment_methods: { enabled: true },
-        transfer_data: { destination: creator.stripeAccountId },
-        metadata: { streamId: stream.id },
-        receipt_email: giver.email,
-      });
-      clientSecret = intent.client_secret;
-      await this.prisma.stream.update({
-        where: { id: stream.id },
-        data: { stripePaymentIntentId: intent.id },
-      });
-    }
-
-    await this.prisma.event.create({
-      data: {
-        type: 'checkout_start',
-        creatorId: creator.id,
-        monumentId: monument?.id ?? null,
-        giverId: giver.id,
-        sourceSlug: dto.monumentSlug ?? null,
-      },
-    });
-
-    return { streamId: stream.id, clientSecret };
-  }
-
-  // Polled by the client after confirm; reconciles directly with Stripe so the
-  // watch-it-land moment never waits on webhook delivery.
-  async streamStatus(streamId: string) {
-    const stream = await this.prisma.stream.findUnique({ where: { id: streamId } });
-    if (!stream) return null;
-    if (stream.status === 'pending' && stream.stripePaymentIntentId) {
-      if (this.simulation && stream.stripePaymentIntentId.startsWith('sim_')) {
-        return this.markSucceeded(stream.id);
-      }
-      const intent = await this.stripe.client.paymentIntents.retrieve(
-        stream.stripePaymentIntentId,
-      );
-      if (intent.status === 'succeeded') {
-        return this.markSucceeded(stream.id);
-      }
-    }
-    return { id: stream.id, status: stream.status };
   }
 
   async handleWebhook(rawBody: Buffer, signature: string) {
@@ -166,7 +73,6 @@ export class PaymentService {
         data: {
           type: 'checkout_complete',
           creatorId: stream.creatorId,
-          monumentId: stream.monumentId,
           giverId: stream.giverId,
           metadata: { amountCents: stream.amountCents, streamType: stream.type, cardsUpdated: card.count },
         },

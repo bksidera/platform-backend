@@ -85,5 +85,14 @@ describe('FrameService', () => {
         },
       ],
     });
+    expect(prisma.frame.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          cards: expect.objectContaining({
+            where: { hiddenByCreator: false, reportedAt: null, visibility: 'public' },
+          }),
+        }),
+      }),
+    );
   });
 });

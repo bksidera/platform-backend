@@ -59,7 +59,7 @@ export class CardService {
         photoUrl: dto.photoUrl ?? null,
         photoModerationStatus: dto.photoUrl ? 'pending' : null,
         amountCents,
-        paymentStatus: amountCents ? 'pending' : 'none',
+        paymentStatus: 'none',
       },
     });
 
@@ -161,7 +161,8 @@ export class CardService {
       where: { id: cardId },
       include: { stream: true, frame: true },
     });
-    if (!card || !card.stream) return null;
+    if (!card) return null;
+    if (!card.stream) return { id: card.id, status: card.paymentStatus };
 
     if (card.stream.status === 'pending' && card.stream.stripePaymentIntentId) {
       if (this.simulation && card.stream.stripePaymentIntentId.startsWith('sim_')) {

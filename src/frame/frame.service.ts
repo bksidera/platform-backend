@@ -49,7 +49,7 @@ export class FrameService {
       include: {
         creator: { select: { name: true, slug: true } },
         cards: {
-          where: { hiddenByCreator: false, reportedAt: null },
+          where: { hiddenByCreator: false, reportedAt: null, visibility: 'public' },
           orderBy: { createdAt: 'asc' },
           select: {
             id: true,

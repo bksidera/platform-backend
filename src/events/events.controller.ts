@@ -8,11 +8,10 @@ import { ResponseService } from 'src/response/response.service';
 // countersign) are written server-side where they happen.
 const CLIENT_EVENT_TYPES = [
   'qr_scan',
-  'monument_view',
-  'observation_attached',
+  'frame_view',
+  'card_started',
+  'card_opened',
   'photo_attached',
-  'graduation_view',
-  'graduation_accept',
 ] as const;
 
 export class TrackEventDto {
@@ -25,7 +24,11 @@ export class TrackEventDto {
 
   @IsOptional()
   @IsString()
-  monumentId?: string;
+  frameId?: string;
+
+  @IsOptional()
+  @IsString()
+  cardId?: string;
 
   @IsOptional()
   @IsString()
@@ -49,7 +52,8 @@ export class EventsController {
       data: {
         type: dto.type,
         sourceSlug: dto.sourceSlug ?? null,
-        monumentId: dto.monumentId ?? null,
+        frameId: dto.frameId ?? null,
+        cardId: dto.cardId ?? null,
         creatorId: dto.creatorId ?? null,
         metadata: (dto.metadata as object) ?? undefined,
       },

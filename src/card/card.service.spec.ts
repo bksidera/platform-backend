@@ -77,6 +77,51 @@ describe('CardService', () => {
     expect(stripe.client.paymentIntents.create).not.toHaveBeenCalled();
   });
 
+  it('creates an amount card without marking payment pending before intent creation', async () => {
+    const prisma = {
+      frame: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'frame-1',
+          creatorId: 'creator-1',
+          status: 'active',
+          creator: { id: 'creator-1' },
+        }),
+      },
+      giver: {
+        upsert: jest.fn().mockResolvedValue({ id: 'giver-1' }),
+      },
+      card: {
+        create: jest.fn().mockResolvedValue({
+          id: 'card-1',
+          displayName: 'Ari',
+          note: 'Beautiful.',
+          photoUrl: null,
+          photoModerationStatus: null,
+          amountCents: 1000,
+          currency: 'usd',
+          paymentStatus: 'none',
+          visibility: 'public',
+          createdAt: new Date('2026-06-11T20:00:00.000Z'),
+        }),
+      },
+      event: {
+        create: jest.fn().mockResolvedValue({ id: 'event-1' }),
+      },
+    };
+    const { service } = serviceWith(prisma);
+
+    await service.createForFrame('blue-door', {
+      displayName: 'Ari',
+      email: 'ari@example.test',
+      note: 'Beautiful.',
+      amountCents: 1000,
+    });
+
+    expect(prisma.card.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ amountCents: 1000, paymentStatus: 'none' }),
+    });
+  });
+
   it('creates an amount stream and simulated payment intent anchored to the card', async () => {
     const prisma = {
       card: {
@@ -150,6 +195,25 @@ describe('CardService', () => {
     await expect(service.paymentStatus('card-1')).resolves.toEqual({
       id: 'card-1',
       status: 'succeeded',
+    });
+  });
+
+  it('returns card payment state even before a stream exists', async () => {
+    const prisma = {
+      card: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'card-1',
+          paymentStatus: 'none',
+          stream: null,
+          frame: { slug: 'blue-door' },
+        }),
+      },
+    };
+    const { service } = serviceWith(prisma);
+
+    await expect(service.paymentStatus('card-1')).resolves.toEqual({
+      id: 'card-1',
+      status: 'none',
     });
   });
 

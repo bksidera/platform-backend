@@ -7,10 +7,25 @@ const port = process.env.PORT || 3000;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true, bodyParser: true });
+  const allowedOrigins = [
+    process.env.FRONTEND_BASE_URL,
+    process.env.FRONTEND_PRODUCTION_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+  ].filter(Boolean);
+  const isAllowedOrigin = (origin?: string) => {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    return /^https:\/\/platform-frontend(-[a-z0-9]+)?-rbkiekel-gmailcoms-projects\.vercel\.app$/.test(origin);
+  };
 
   app.enableCors({
-    allowedHeaders: '*',
-    origin: '*',
+    origin: (origin, callback) => {
+      callback(null, isAllowedOrigin(origin));
+    },
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   app.setGlobalPrefix('backend-api');
 
