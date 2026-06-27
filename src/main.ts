@@ -16,7 +16,10 @@ async function bootstrap() {
   const isAllowedOrigin = (origin?: string) => {
     if (!origin) return true;
     if (allowedOrigins.includes(origin)) return true;
-    return /^https:\/\/platform-frontend(-[a-z0-9]+)?-rbkiekel-gmailcoms-projects\.vercel\.app$/.test(origin);
+    return (
+      /^https:\/\/platform-frontend-[a-z0-9-]+\.vercel\.app$/.test(origin) ||
+      /^https:\/\/platform-frontend(-[a-z0-9]+)?-rbkiekel-gmailcoms-projects\.vercel\.app$/.test(origin)
+    );
   };
 
   app.enableCors({
