@@ -27,25 +27,6 @@ export class ResponseService {
             res
         );
     }
-    async redirectToHomeWithData(message: string, data: Record<string, unknown>, res: Response) {
-
-        const clonedData = { ...data };
-
-
-        if (clonedData.user) {
-            clonedData.user = JSON.stringify(clonedData.user);
-        }
-
-        const filteredData = Object.fromEntries(Object.entries(clonedData).filter(([_, value]) => value != null));
-
-
-        const queryParams = new URLSearchParams({ message, ...filteredData }).toString();
-
-        // Redirect to the home page with query parameters
-        res.redirect(`http://localhost:3000/api?${queryParams}`);
-    }
-
-
     async USER_NOT_FOUND(message: string, data: unknown, res: Response) {
         return await this.responseStructure(
             'USER_NOT_FOUND',

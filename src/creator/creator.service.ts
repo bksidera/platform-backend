@@ -31,7 +31,9 @@ export class CreatorService {
       });
     }
 
-    const base = this.configService.get<string>('FRONTEND_BASE_URL');
+    const base =
+      this.configService.get<string>('FRONTEND_PRODUCTION_URL') ??
+      this.configService.get<string>('FRONTEND_BASE_URL');
     const link = await this.stripe.client.accountLinks.create({
       account: accountId,
       refresh_url: `${base}/dashboard/onboarding?refresh=1`,

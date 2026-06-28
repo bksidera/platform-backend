@@ -1,4 +1,9 @@
-import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min } from 'class-validator';
+import { IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min } from 'class-validator';
+
+export enum CardVisibilityDto {
+  private = 'private',
+  public = 'public',
+}
 
 export class CreateCardDto {
   @IsNotEmpty()
@@ -23,6 +28,10 @@ export class CreateCardDto {
   @Min(100)
   @Max(200000)
   amountCents?: number;
+
+  @IsOptional()
+  @IsEnum(CardVisibilityDto)
+  visibility?: CardVisibilityDto;
 }
 
 export class ReportCardDto {

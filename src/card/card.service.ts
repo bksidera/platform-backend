@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { paymentSimulationEnabled } from 'src/payment/payment.service';
 import { StripeService } from 'src/stripe/stripe.service';
+import { MailService } from 'src/mail/mail.service';
 import { CreateCardDto, ReportCardDto } from './dto/card.dto';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class CardService {
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   private get simulation() {
@@ -57,9 +59,10 @@ export class CardService {
         email,
         note: dto.note?.trim() || null,
         photoUrl: dto.photoUrl ?? null,
-        photoModerationStatus: dto.photoUrl ? 'pending' : null,
+        photoModerationStatus: dto.photoUrl ? 'approved' : null,
         amountCents,
         paymentStatus: 'none',
+        visibility: dto.visibility ?? 'public',
       },
     });
 
@@ -78,6 +81,22 @@ export class CardService {
         },
       },
     });
+
+    const frontendBaseUrl =
+      this.configService.get<string>('FRONTEND_BASE_URL') ??
+      this.configService.get<string>('FRONTEND_PRODUCTION_URL') ??
+      '';
+
+    void this.mailService
+      .sendCardPlaced(frame.creator.email, {
+        creatorName: frame.creator.name,
+        frameTitle: frame.title,
+        displayName: card.displayName,
+        note: card.note,
+        amountCents: card.amountCents,
+        cardUrl: `${frontendBaseUrl}/m/${frame.slug}`,
+      })
+      .catch(() => undefined);
 
     return { card: this.publicCard(card) };
   }
@@ -212,6 +231,18 @@ export class CardService {
       data: { type: 'card_hidden', creatorId, cardId },
     });
     return { hidden: true };
+  }
+
+  async setPhotoModeration(cardId: string, creatorId: string, status: 'approved' | 'held') {
+    const updated = await this.prisma.card.updateMany({
+      where: { id: cardId, creatorId, photoUrl: { not: null } },
+      data: { photoModerationStatus: status },
+    });
+    if (updated.count === 0) return null;
+    await this.prisma.event.create({
+      data: { type: status === 'approved' ? 'photo_approved' : 'photo_held', creatorId, cardId },
+    });
+    return { photoModerationStatus: status };
   }
 
   private async markSucceeded(cardId: string, streamId: string) {

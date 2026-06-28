@@ -95,4 +95,56 @@ describe('FrameService', () => {
       }),
     );
   });
+
+  it('returns creator frame cards with private amount and review data', async () => {
+    const prisma = {
+      frame: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'frame-1',
+          title: 'Blue Door',
+          context: 'June 11',
+          imageUrl: 'https://example.test/frame.jpg',
+          slug: 'blue-door',
+          status: 'active',
+          creator: { name: 'Maria Vane', slug: 'maria-vane' },
+          cards: [
+            {
+              id: 'card-1',
+              displayName: 'Ari',
+              email: 'ari@example.test',
+              note: 'Beautiful.',
+              photoUrl: 'https://example.test/card.jpg',
+              photoModerationStatus: 'pending',
+              amountCents: 2500,
+              currency: 'usd',
+              paymentStatus: 'succeeded',
+              visibility: 'private',
+              hiddenByCreator: false,
+              createdAt: new Date('2026-06-11T20:00:00.000Z'),
+            },
+          ],
+        }),
+      },
+    };
+    const service = serviceWith(prisma);
+
+    await expect(service.creatorBySlug('creator-1', 'blue-door')).resolves.toMatchObject({
+      cards: [
+        {
+          id: 'card-1',
+          email: 'ari@example.test',
+          photoUrl: 'https://example.test/card.jpg',
+          photoModerationStatus: 'pending',
+          amountCents: 2500,
+          hasAmount: true,
+          visibility: 'private',
+        },
+      ],
+    });
+    expect(prisma.frame.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { slug: 'blue-door', creatorId: 'creator-1' },
+      }),
+    );
+  });
 });

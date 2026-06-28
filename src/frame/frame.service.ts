@@ -90,4 +90,57 @@ export class FrameService {
       cardCount: frame.cards.length,
     };
   }
+
+  async creatorBySlug(creatorId: string, slug: string) {
+    const frame = await this.prisma.frame.findFirst({
+      where: { slug, creatorId },
+      include: {
+        creator: { select: { name: true, slug: true } },
+        cards: {
+          where: { reportedAt: null },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            note: true,
+            photoUrl: true,
+            photoModerationStatus: true,
+            amountCents: true,
+            currency: true,
+            paymentStatus: true,
+            visibility: true,
+            hiddenByCreator: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+    if (!frame || frame.status !== 'active') return null;
+
+    return {
+      id: frame.id,
+      title: frame.title,
+      context: frame.context,
+      imageUrl: frame.imageUrl,
+      slug: frame.slug,
+      creator: frame.creator,
+      cards: frame.cards.map((card) => ({
+        id: card.id,
+        displayName: card.displayName,
+        email: card.email,
+        note: card.note,
+        photoUrl: card.photoUrl,
+        photoModerationStatus: card.photoModerationStatus,
+        amountCents: card.amountCents,
+        currency: card.currency,
+        hasAmount: Boolean(card.amountCents && card.paymentStatus === 'succeeded'),
+        paymentStatus: card.paymentStatus,
+        visibility: card.visibility,
+        hiddenByCreator: card.hiddenByCreator,
+        createdAt: card.createdAt,
+      })),
+      cardCount: frame.cards.length,
+    };
+  }
 }

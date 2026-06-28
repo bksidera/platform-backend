@@ -64,15 +64,20 @@ export class PaymentService {
       data: { status: 'succeeded', occurredAt: new Date() },
     });
     if (updated.count > 0) {
-      const stream = await this.prisma.stream.findUnique({ where: { id: streamId } });
+      const stream = await this.prisma.stream.findUnique({
+        where: { id: streamId },
+        include: { card: true },
+      });
       const card = await this.prisma.card.updateMany({
         where: { streamId },
         data: { paymentStatus: 'succeeded' },
       });
       await this.prisma.event.create({
         data: {
-          type: 'checkout_complete',
+          type: 'amount_completed',
           creatorId: stream.creatorId,
+          frameId: stream.card?.frameId ?? null,
+          cardId: stream.card?.id ?? null,
           giverId: stream.giverId,
           metadata: { amountCents: stream.amountCents, streamType: stream.type, cardsUpdated: card.count },
         },

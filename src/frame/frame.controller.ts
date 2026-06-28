@@ -26,6 +26,16 @@ export class FrameController {
     return this.responseService.success('success', 'OK', { frames }, res);
   }
 
+  @UseGuards(CreatorGuard)
+  @Get(':slug/creator')
+  async creatorBySlug(@Req() req, @Param('slug') slug: string, @Res() res: Response) {
+    const frame = await this.frameService.creatorBySlug(req.user.id, slug);
+    if (!frame) {
+      return this.responseService.NOT_FOUND('No frame at this address', {}, res);
+    }
+    return this.responseService.success('success', 'OK', frame, res);
+  }
+
   @Get(':slug')
   async publicBySlug(@Param('slug') slug: string, @Res() res: Response) {
     const frame = await this.frameService.publicBySlug(slug);

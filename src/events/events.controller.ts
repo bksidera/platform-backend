@@ -4,7 +4,7 @@ import { IsIn, IsObject, IsOptional, IsString } from 'class-validator';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ResponseService } from 'src/response/response.service';
 
-// Client-reported events only; money-truth events (checkout_complete, claim,
+// Client-reported events only; money-truth events (amount_completed, claim,
 // countersign) are written server-side where they happen.
 const CLIENT_EVENT_TYPES = [
   'qr_scan',

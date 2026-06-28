@@ -58,4 +58,24 @@ export class CardController {
     }
     return this.responseService.success('success', 'Card hidden', result, res);
   }
+
+  @UseGuards(CreatorGuard)
+  @Post('cards/:id/photo/approve')
+  async approvePhoto(@Param('id') id: string, @Req() req, @Res() res: Response) {
+    const result = await this.cardService.setPhotoModeration(id, req.user.id, 'approved');
+    if (!result) {
+      return this.responseService.NOT_FOUND('Card not found', {}, res);
+    }
+    return this.responseService.success('success', 'Photo approved', result, res);
+  }
+
+  @UseGuards(CreatorGuard)
+  @Post('cards/:id/photo/hold')
+  async holdPhoto(@Param('id') id: string, @Req() req, @Res() res: Response) {
+    const result = await this.cardService.setPhotoModeration(id, req.user.id, 'held');
+    if (!result) {
+      return this.responseService.NOT_FOUND('Card not found', {}, res);
+    }
+    return this.responseService.success('success', 'Photo held', result, res);
+  }
 }

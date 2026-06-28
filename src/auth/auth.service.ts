@@ -21,7 +21,9 @@ export class AuthService {
     await this.prisma.magicLinkToken.create({
       data: { token, email, kind, expiresAt: new Date(Date.now() + TOKEN_TTL_MS) },
     });
-    const base = this.configService.get<string>('FRONTEND_BASE_URL');
+    const base =
+      this.configService.get<string>('FRONTEND_PRODUCTION_URL') ??
+      this.configService.get<string>('FRONTEND_BASE_URL');
     const link = `${base}/auth/verify?token=${token}`;
     await this.mailService.sendMagicLink(email, link, kind);
   }

@@ -9,8 +9,7 @@ datasource db {
 
 // PLATFORM data model.
 // Living Frame is the active product model: a creator-owned image with visitor
-// cards attached below it. Monument / Inscription remain only as deprecated
-// scaffolding until the production cutover is complete.
+// cards attached below it.
 
 enum ArchiveVisibility {
   aggregate_only
@@ -20,11 +19,6 @@ enum ArchiveVisibility {
 enum GiverStatus {
   guest
   claimed
-}
-
-enum MonumentStatus {
-  active
-  archived
 }
 
 enum FrameStatus {
@@ -82,7 +76,6 @@ model Creator {
 
   frames            Frame[]
   cards             Card[]
-  monuments         Monument[]
   streams           Stream[]
   stewardships      Stewardship[]
   countersignatures Countersignature[]
@@ -97,7 +90,6 @@ model Giver {
 
   streams      Stream[]
   cards        Card[]
-  inscriptions Inscription[]
   stewardships Stewardship[]
 }
 
@@ -147,71 +139,25 @@ model Card {
   @@index([giverId])
 }
 
-model Monument {
-  id           String         @id @default(uuid())
-  creatorId    String
-  imageUrl     String
-  title        String
-  venue        String
-  eventDate    DateTime
-  qrSourceSlug String         @unique
-  status       MonumentStatus @default(active)
-  createdAt    DateTime       @default(now())
-
-  creator      Creator       @relation(fields: [creatorId], references: [id])
-  streams      Stream[]
-  inscriptions Inscription[]
-
-  @@index([creatorId])
-}
-
 // Append-only. The Ledger's source of truth.
 model Stream {
   id                    String       @id @default(uuid())
   giverId               String
   creatorId             String
-  monumentId            String? // nullable — Streams can occur off-Monument from the Archive
   type                  StreamType
   amountCents           Int
   currency              String       @default("usd")
   status                StreamStatus @default(pending)
   stripePaymentIntentId String?      @unique
-  venueStamp            String? // "venue · date", carried from the QR source param
+  venueStamp            String?
   occurredAt            DateTime     @default(now())
 
   giver            Giver             @relation(fields: [giverId], references: [id])
   creator          Creator           @relation(fields: [creatorId], references: [id])
-  monument         Monument?         @relation(fields: [monumentId], references: [id])
   card             Card?
-  inscription      Inscription?
   countersignature Countersignature?
 
   @@index([creatorId, occurredAt])
-  @@index([giverId])
-}
-
-// Immutable after placement except visibility / hiddenByCreator.
-model Inscription {
-  id                    String            @id @default(uuid())
-  streamId              String            @unique // THE PAYMENT GATE — required, one pin per Stream
-  giverId               String
-  monumentId            String
-  x                     Float // normalized 0–1 against image dimensions
-  y                     Float // normalized 0–1
-  glyph                 String
-  observationText       String?           @db.VarChar(240)
-  photoUrl              String?
-  photoModerationStatus ModerationStatus?
-  visibility            Visibility        @default(private) // giver's per-artist key
-  hiddenByCreator       Boolean           @default(false) // creator's per-pin key
-  createdAt             DateTime          @default(now())
-
-  stream           Stream            @relation(fields: [streamId], references: [id])
-  giver            Giver             @relation(fields: [giverId], references: [id])
-  monument         Monument          @relation(fields: [monumentId], references: [id])
-  countersignature Countersignature?
-
-  @@index([monumentId])
   @@index([giverId])
 }
 
@@ -236,12 +182,10 @@ model Stewardship {
 model Countersignature {
   id            String   @id @default(uuid())
   creatorId     String
-  inscriptionId String?  @unique // set for on-Monument Streams
-  streamId      String?  @unique // set for off-Monument Streams
+  streamId      String?  @unique
   createdAt     DateTime @default(now())
 
   creator     Creator      @relation(fields: [creatorId], references: [id])
-  inscription Inscription? @relation(fields: [inscriptionId], references: [id])
   stream      Stream?      @relation(fields: [streamId], references: [id])
 }
 
@@ -261,10 +205,9 @@ model MagicLinkToken {
 // Instrumentation (spec §9/§11). No third-party analytics.
 model Event {
   id         String   @id @default(uuid())
-  type       String // qr_scan | monument_view | checkout_start | checkout_complete | pin_placed | observation_attached | photo_attached | graduation_view | graduation_accept | countersign | claim
+  type       String // qr_scan | frame_view | card_started | card_opened | card_placed | amount_started | amount_completed | photo_attached | photo_approved | photo_held | card_reported | card_hidden | claim
   sourceSlug String?
   creatorId  String?
-  monumentId String?
   frameId    String?
   cardId     String?
   giverId    String?
@@ -272,7 +215,6 @@ model Event {
   createdAt  DateTime @default(now())
 
   @@index([type, createdAt])
-  @@index([monumentId])
   @@index([frameId])
   @@index([cardId])
 }
