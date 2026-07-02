@@ -115,7 +115,7 @@ describe('CardService', () => {
         create: jest.fn().mockResolvedValue({ id: 'event-1' }),
       },
     };
-    const { service } = serviceWith(prisma);
+    const { service, mail } = serviceWith(prisma);
 
     await expect(
       service.createForFrame('blue-door', {
@@ -169,7 +169,7 @@ describe('CardService', () => {
         create: jest.fn().mockResolvedValue({ id: 'event-1' }),
       },
     };
-    const { service } = serviceWith(prisma);
+    const { service, mail } = serviceWith(prisma);
 
     await service.createForFrame('blue-door', {
       displayName: 'Ari',
@@ -181,6 +181,10 @@ describe('CardService', () => {
     expect(prisma.card.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ amountCents: 1000, paymentStatus: 'none' }),
     });
+    expect(mail.sendCardPlaced).toHaveBeenCalledWith(
+      'maria@example.test',
+      expect.objectContaining({ amountCents: null }),
+    );
   });
 
   it('stores giver-selected private card visibility', async () => {

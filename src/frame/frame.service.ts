@@ -38,9 +38,41 @@ export class FrameService {
     const frames = await this.prisma.frame.findMany({
       where: { creatorId },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { cards: true } } },
+      include: {
+        _count: { select: { cards: true } },
+        cards: {
+          where: { reportedAt: null },
+          select: {
+            amountCents: true,
+            paymentStatus: true,
+            photoUrl: true,
+            photoModerationStatus: true,
+            hiddenByCreator: true,
+            visibility: true,
+          },
+        },
+      },
     });
-    return frames.map(({ _count, ...frame }) => ({ ...frame, cardCount: _count.cards }));
+    return frames.map(({ _count, cards, ...frame }) => ({
+      ...frame,
+      cardCount: _count.cards,
+      visibleCardCount: cards.filter((card) => !card.hiddenByCreator).length,
+      amountReceivedCents: cards.reduce(
+        (total, card) =>
+          card.paymentStatus === 'succeeded' ? total + (card.amountCents ?? 0) : total,
+        0,
+      ),
+      amountPendingCents: cards.reduce(
+        (total, card) =>
+          card.amountCents && card.paymentStatus !== 'succeeded'
+            ? total + card.amountCents
+            : total,
+        0,
+      ),
+      heldPhotoCount: cards.filter(
+        (card) => card.photoUrl && card.photoModerationStatus !== 'approved',
+      ).length,
+    }));
   }
 
   async publicBySlug(slug: string) {

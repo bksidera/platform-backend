@@ -34,14 +34,52 @@ describe('FrameService', () => {
     const prisma = {
       frame: {
         findMany: jest.fn().mockResolvedValue([
-          { id: 'frame-1', title: 'A', _count: { cards: 2 } },
+          {
+            id: 'frame-1',
+            title: 'A',
+            _count: { cards: 3 },
+            cards: [
+              {
+                amountCents: 1000,
+                paymentStatus: 'succeeded',
+                photoUrl: null,
+                photoModerationStatus: null,
+                hiddenByCreator: false,
+                visibility: 'public',
+              },
+              {
+                amountCents: 2500,
+                paymentStatus: 'pending',
+                photoUrl: 'https://example.test/card.jpg',
+                photoModerationStatus: 'held',
+                hiddenByCreator: false,
+                visibility: 'public',
+              },
+              {
+                amountCents: null,
+                paymentStatus: 'none',
+                photoUrl: null,
+                photoModerationStatus: null,
+                hiddenByCreator: true,
+                visibility: 'public',
+              },
+            ],
+          },
         ]),
       },
     };
     const service = serviceWith(prisma);
 
     await expect(service.listMine('creator-1')).resolves.toEqual([
-      { id: 'frame-1', title: 'A', cardCount: 2 },
+      {
+        id: 'frame-1',
+        title: 'A',
+        cardCount: 3,
+        visibleCardCount: 2,
+        amountReceivedCents: 1000,
+        amountPendingCents: 2500,
+        heldPhotoCount: 1,
+      },
     ]);
   });
 

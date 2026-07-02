@@ -97,6 +97,20 @@ export class CreatorService {
         heroImageUrl: true,
         mediaLinks: true,
         stripeOnboarded: true,
+        frames: {
+          where: { status: 'active' },
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+          select: {
+            id: true,
+            title: true,
+            context: true,
+            imageUrl: true,
+            slug: true,
+            createdAt: true,
+            _count: { select: { cards: true } },
+          },
+        },
       },
     });
     if (!creator) return null;
@@ -105,7 +119,11 @@ export class CreatorService {
       where: { creatorId: creator.id, status: 'active' },
     });
 
-    const { id, ...publicFields } = creator;
-    return { ...publicFields, stewardCount };
+    const { id, frames, ...publicFields } = creator;
+    return {
+      ...publicFields,
+      stewardCount,
+      frames: frames.map(({ _count, ...frame }) => ({ ...frame, cardCount: _count.cards })),
+    };
   }
 }

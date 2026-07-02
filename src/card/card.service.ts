@@ -93,7 +93,7 @@ export class CardService {
         frameTitle: frame.title,
         displayName: card.displayName,
         note: card.note,
-        amountCents: card.amountCents,
+        amountCents: card.paymentStatus === 'succeeded' ? card.amountCents : null,
         cardUrl: `${frontendBaseUrl}/m/${frame.slug}`,
       })
       .catch(() => undefined);
